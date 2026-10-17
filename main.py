@@ -15,8 +15,8 @@ if not TOKEN:
 
 ADMIN_TELEGRAM_ID = os.environ.get("ADMIN_TELEGRAM_ID")  # optionnel : notifications
 
+ADMIN_USERNAME = "@Inocsene"   # contact Telegram (affiché en texte)
 ADMIN_TEL = "+50956466804"
-ADMIN_URL_TG = "https://t.me/+50956466804"
 ADMIN_URL_WA = (
     "https://wa.me/50956466804?text="
     "Salut%20Inocsene%20Zero%2C%20je%20souhaite%20effectuer%20une%20commande%20VPN%20%21"
@@ -85,7 +85,7 @@ bot = telebot.TeleBot(TOKEN, parse_mode="HTML")
 
 # ───────────── GRAS POUR LES BOUTONS ─────────────
 def bold(text):
-    """Met le texte en lettres grasses (lisible sur les boutons Telegram)."""
+    """Lettres grasses, plus lisibles sur les boutons Telegram."""
     out = []
     for c in text:
         if "A" <= c <= "Z":
@@ -110,24 +110,23 @@ def build_welcome(name):
         f"{LINE}\n\n"
         f"Salut <b>{name}</b> ! 👋\n"
         "Bienvenue sur la plateforme officielle.\n\n"
-        "✨ Connexion <b>ultra-rapide</b> et stable\n"
-        "🛡️ Protection avancée pour ton compte\n"
+        "✨ Connexion <b>ultra-rapide</b> et stable\n\n"
+        "🛡️ Protection avancée pour ton compte\n\n"
         "🎮 Gameplay fluide, sans compromis\n\n"
-        f"{LINE}\n"
+        f"{LINE}\n\n"
         "👇 <i>Choisis ton VPN pour découvrir l'offre.</i>"
     )
 
 def build_offer(p):
-    feats = "\n".join(p["features"])
+    feats = "\n\n".join(p["features"])
     return (
         f"<b>{p['emoji']} {p['name'].upper()} {p['emoji']}</b>\n"
         f"{LINE}\n\n"
         f"{feats}\n\n"
-        f"💰 <b>Prix :</b> {price_text(p)}\n"
+        f"{LINE}\n\n"
+        f"💰 <b>Prix :</b> {price_text(p)}\n\n"
         "💳 <b>Paiement :</b> Natcash\n\n"
-        f"🎓 <b>Après ta commande, tape {p['code']}</b> dans ce chat pour recevoir "
-        f"ton tutoriel <b>{p['tuto']}</b>.\n\n"
-        f"{LINE}\n"
+        f"{LINE}\n\n"
         "🛒 <i>Appuie sur « Continuer l'achat » pour commander.</i>"
     )
 
@@ -137,7 +136,7 @@ PANEL_TEXT = (
     "⏳ <b>Bientôt disponible</b>\n\n"
     "Ce service n'est pas disponible pour le moment. "
     "Seuls nos VPN sont actuellement en stock.\n\n"
-    "🔔 <i>Contacte l'administrateur pour être prévenu dès sa réouverture.</i>"
+    f"🔔 <i>Contacte l'administrateur ({ADMIN_USERNAME}) pour être prévenu dès sa réouverture.</i>"
 )
 
 TICKET_TEMPLATE = (
@@ -145,22 +144,23 @@ TICKET_TEMPLATE = (
     f"{LINE}\n"
     "<b>⚡ INOCSENE ZERO ⚡</b>\n"
     f"{LINE}\n\n"
-    "📋 <b>N° de commande :</b> <code>{order}</code>\n"
-    "👤 <b>Client :</b> {name}\n"
+    "📋 <b>N° de commande :</b> <code>{order}</code>\n\n"
+    "👤 <b>Client :</b> {name}\n\n"
     "📅 <b>Date :</b> {date}\n\n"
-    f"{LINE}\n"
-    "🛡️ <b>Produit :</b> {product}\n"
-    "💰 <b>Prix :</b> {price} HTG\n"
-    "💳 <b>Paiement :</b> Natcash\n"
-    "📌 <b>Statut :</b> ⏳ En attente de paiement\n"
+    f"{LINE}\n\n"
+    "🛡️ <b>Produit :</b> {product}\n\n"
+    "💰 <b>Prix :</b> {price} HTG\n\n"
+    "💳 <b>Paiement :</b> Natcash\n\n"
+    "📌 <b>Statut :</b> ⏳ En attente de paiement\n\n"
     f"{LINE}\n\n"
     "<b>✅ POUR VALIDER LA COMMANDE, CONTACTE L'ADMINISTRATEUR "
-    "VIA WHATSAPP OU TELEGRAM 👇</b>\n\n"
-    "1️⃣ Effectue le dépôt Natcash de <b>{price} HTG</b>\n"
-    f"2️⃣ Envoie ton reçu et ton n° de commande à l'administrateur (<b>{ADMIN_TEL}</b>)\n"
-    "3️⃣ Reçois ton fichier VPN, puis tape <b>{code}</b> dans ce chat "
+    "SUR TELEGRAM OU WHATSAPP 👇</b>\n\n"
+    f"1️⃣ Pour recevoir ton VPN, contacte l'administrateur sur Telegram : <b>{ADMIN_USERNAME}</b>\n\n"
+    "2️⃣ Envoie-lui ce billet de commande et ton reçu Natcash de <b>{price} HTG</b>\n\n"
+    "3️⃣ Une fois ton VPN reçu, tape <b>{code}</b> dans ce chat "
     "pour débloquer ton tutoriel <b>{tuto}</b> 🎓\n\n"
-    f"{LINE}\n"
+    f"{LINE}\n\n"
+    f"📲 <i>Tu peux aussi écrire sur WhatsApp ({ADMIN_TEL}) avec le bouton ci-dessous.</i>\n\n"
     "🙏 <i>Merci de ta confiance !</i>"
 )
 
@@ -204,25 +204,19 @@ def main_menu():
     for code, p in PRODUCTS.items():
         m.row(types.InlineKeyboardButton(f"{p['emoji']} {bold(p['name'])}", callback_data=f"offer_{code}"))
     m.row(types.InlineKeyboardButton(f"🔒 {bold('Panel Anti-Ban Premium')}", callback_data="panel"))
-    m.row(
-        types.InlineKeyboardButton(f"🟢 {bold('WhatsApp')}", url=ADMIN_URL_WA),
-        types.InlineKeyboardButton(f"🔵 {bold('Telegram')}", url=ADMIN_URL_TG),
-    )
+    m.row(types.InlineKeyboardButton(f"🟢 {bold('Contacter sur WhatsApp')}", url=ADMIN_URL_WA))
     m.row(types.InlineKeyboardButton(f"📢 {bold('Canal Proofs & Tutos')}", url=LINK_CHANNEL_PROOF))
     return m
 
 def offer_menu(code):
     m = types.InlineKeyboardMarkup()
-    m.row(types.InlineKeyboardButton(f"🛒 {bold(chr(67) + 'ONTINUER L' + chr(39) + 'ACHAT')} ✅", callback_data=f"buy_{code}"))
+    m.row(types.InlineKeyboardButton(f"🛒 {bold('CONTINUER L' + chr(39) + 'ACHAT')} ✅", callback_data=f"buy_{code}"))
     m.row(types.InlineKeyboardButton(f"🔙 {bold('Retour au menu')}", callback_data="menu_home"))
     return m
 
 def contact_buttons():
     m = types.InlineKeyboardMarkup()
-    m.row(
-        types.InlineKeyboardButton(f"🟢 {bold('WhatsApp')}", url=ADMIN_URL_WA),
-        types.InlineKeyboardButton(f"🔵 {bold('Telegram')}", url=ADMIN_URL_TG),
-    )
+    m.row(types.InlineKeyboardButton(f"🟢 {bold('Contacter sur WhatsApp')}", url=ADMIN_URL_WA))
     m.row(types.InlineKeyboardButton(f"🏠 {bold('Menu principal')}", callback_data="menu_home"))
     return m
 
@@ -252,7 +246,7 @@ def send_demo(chat_id, p):
         bot.copy_message(chat_id, DEMO_CHANNEL, p["demo_id"])
     except Exception:
         try:
-            bot.send_message(chat_id, f"🎬 <b>Démonstration en vidéo</b>\n👉 {p['demo_link']}")
+            bot.send_message(chat_id, f"🎬 <b>Démonstration en vidéo</b>\n\n👉 {p['demo_link']}")
         except Exception:
             pass
 
