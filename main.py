@@ -13,12 +13,11 @@ TOKEN = os.environ.get("BOT_TOKEN")
 if not TOKEN:
     raise SystemExit("BOT_TOKEN manquant dans Render > Environment")
 
-# Ton ID Telegram pour recevoir les notifications (optionnel)
-ADMIN_TELEGRAM_ID = os.environ.get("ADMIN_TELEGRAM_ID")
+ADMIN_TELEGRAM_ID = os.environ.get("ADMIN_TELEGRAM_ID")  # optionnel : notifications
 
 ADMIN_TEL = "+50956466804"
-ADMIN_URL_TG = "https://t.me/+50956466804"
-# Lien WhatsApp direct avec message pré-rempli (correctement encodé)
+ADMIN_USERNAME = "@Inocsene"
+ADMIN_URL_TG = "https://t.me/Inocsene"
 ADMIN_URL_WA = (
     "https://wa.me/50956466804?text="
     "Salut%20Inocsene%20Zero%2C%20je%20souhaite%20effectuer%20une%20commande%20VPN%20%21"
@@ -26,13 +25,47 @@ ADMIN_URL_WA = (
 
 LINE = "━━━━━━━━━━━━━━━━━━━━"
 
-# ───────────── LIENS DES TUTORIELS & DEMOS ─────────────
+# ───────────── LIENS ─────────────
 LINK_ACTIVER_NUIT = "https://t.me/InocseneZeroTuto/4"
 LINK_KEY_NUIT = "https://t.me/InocseneZeroTuto/3"
 LINK_KEY_DAYOU = "https://t.me/InocseneZeroTuto/5"
-LINK_DEMO_VPN_BOUTONS = "https://t.me/InocseneZeroTuto/6"
-LINK_DEMO_VPN_FREEZE = "https://t.me/InocseneZeroTuto/7"
-LINK_CHANNEL_PROOF = "https://t.me/InocseneZeroTuto"
+LINK_CHANNEL_PROOF = "https://t.me/InocseneZeroTuto"   # utilisé dans les tutoriels
+LINK_CHANNEL_BUTTON = "https://t.me/InocseneZero"      # bouton « Canal Proofs & Tutos »
+
+# Canal où se trouvent les vidéos de démo (le bot essaie de les envoyer en vidéo directe)
+DEMO_CHANNEL = "@InocseneZeroTuto"
+
+# ───────────── OFFRES ─────────────
+PRODUCTS = {
+    "bouton": {
+        "emoji": "🔰",
+        "name": "VPN avec Bouton",
+        "ticket_name": "VPN Anti-Ban (avec Bouton)",
+        "features": [
+            "🛡️ Protection : <b>Anti-Ban</b>",
+            "🎯 Boutons intégrés dans l'application",
+            "⚡ Gameplay fluide et stable",
+        ],
+        "price": 250,
+        "old_price": 500,
+        "demo_id": 6,
+        "demo_link": "https://t.me/InocseneZeroTuto/6",
+    },
+    "auto": {
+        "emoji": "⚡",
+        "name": "VPN Automatique VIP",
+        "ticket_name": "VPN Automatique VIP (Anti-Ban &amp; Anti-Blacklist)",
+        "features": [
+            "🛡️ Protection : <b>Anti-Ban &amp; Anti-Blacklist</b>",
+            "🤖 Mode automatique haute précision",
+            "🎮 Idéal pour les longues sessions de jeu",
+        ],
+        "price": 500,
+        "old_price": None,
+        "demo_id": 7,
+        "demo_link": "https://t.me/InocseneZeroTuto/7",
+    },
+}
 
 # Fuseau horaire Haïti
 try:
@@ -47,42 +80,35 @@ def now_local():
 bot = telebot.TeleBot(TOKEN, parse_mode="HTML")
 
 # ───────────── TEXTES ─────────────
-WELCOME = (
-    "<b>⚡ INOCSENE ZERO - SERVICE OFFICIEL ⚡</b>\n"
-    f"{LINE}\n\n"
-    "Salut <b>{name}</b> ! 👋 Bienvenue sur notre plateforme officielle.\n\n"
-    "🚀 <b>Profite d'une connexion ultra-rapide, stable et 100% Anti-Blacklist pour tes jeux !</b>\n\n"
-    "Fais ton choix ci-dessous pour découvrir nos services 👇"
-)
+def price_text(p):
+    if p["old_price"]:
+        return f"<s>{p['old_price']} HTG</s> ➡️ <b>{p['price']} HTG</b> 🔥"
+    return f"<b>{p['price']} HTG</b>"
 
-VPN_BOUTONS_TEXT = (
-    "<b>🛡️ VPN ANTI-BLACKLIST (AVEC BOUTONS) 🛡️</b>\n"
-    f"{LINE}\n\n"
-    "✅ Protection Anti-Blacklist maximale\n"
-    "✅ Gameplay fluide et ultra-stable\n"
-    "✅ Application avec boutons intégrés\n\n"
-    f"🎬 <b>Regarde la démonstration en jeu :</b>\n👉 {LINK_DEMO_VPN_BOUTONS}\n\n"
-    "💰 <b>Prix :</b> 450 HTG\n"
-    "💳 <b>Paiement :</b> Natcash"
-)
+def build_welcome(name):
+    return (
+        "<b>👑 INOCSENE ZERO • VIP STORE FREE FIRE 👑</b>\n"
+        f"{LINE}\n\n"
+        f"Salut <b>{name}</b> ! 👋\n"
+        "Bienvenue sur la plateforme officielle.\n\n"
+        "✨ Connexion <b>ultra-rapide</b> et stable\n"
+        "🛡️ Protection avancée pour ton compte\n"
+        "🎮 Gameplay fluide, sans compromis\n\n"
+        f"{LINE}\n"
+        "👇 <i>Choisis ton VPN pour découvrir l'offre.</i>"
+    )
 
-VPN_FREEZE_TEXT = (
-    "<b>❄️ VPN ANTI-BLACKLIST (FREEZE AUTOMATIQUE) ❄️</b>\n"
-    f"{LINE}\n\n"
-    "✅ Protection Anti-Blacklist maximale\n"
-    "✅ Système Freeze automatique haute performance\n"
-    "✅ Idéal pour les longues sessions de jeu\n\n"
-    f"🎬 <b>Regarde la démonstration en jeu :</b>\n👉 {LINK_DEMO_VPN_FREEZE}\n\n"
-    "💰 <b>Prix :</b> 500 HTG\n"
-    "💳 <b>Paiement :</b> Natcash"
-)
-
-PANEL_TEXT = (
-    "<b>⏳ PANEL ANTI-BAN ⏳</b>\n"
-    f"{LINE}\n\n"
-    "Désolé, les panels sont indisponibles pour le moment. "
-    "Seuls nos VPN Anti-Blacklist Premium sont actuellement en stock !"
-)
+def build_offer(p):
+    feats = "\n".join(p["features"])
+    return (
+        f"<b>{p['emoji']} {p['name'].upper()} {p['emoji']}</b>\n"
+        f"{LINE}\n\n"
+        f"{feats}\n\n"
+        f"💰 <b>Prix :</b> {price_text(p)}\n"
+        "💳 <b>Paiement :</b> Natcash\n\n"
+        f"{LINE}\n"
+        "🛒 <i>Appuie sur « Continuer l'achat » pour commander.</i>"
+    )
 
 TICKET_TEMPLATE = (
     "<b>🧾 BILLET DE COMMANDE OFFICIEL 🧾</b>\n"
@@ -94,19 +120,16 @@ TICKET_TEMPLATE = (
     "📅 <b>Date :</b> {date}\n\n"
     f"{LINE}\n"
     "🛡️ <b>Produit :</b> {product}\n"
-    "✅ Connexion ultra-rapide et stable\n"
-    "✅ Anti-blacklist garanti pour le jeu\n"
-    f"{LINE}\n\n"
     "💰 <b>Prix :</b> {price} HTG\n"
-    "💳 <b>Mode de paiement :</b> Natcash\n"
-    "📌 <b>Statut :</b> ⏳ En attente de paiement\n\n"
-    f"{LINE}\n"
-    "📌 <b>CONSIGNES :</b>\n"
-    "1️⃣ Effectue le dépôt Natcash de <b>{price} HTG</b>.\n"
-    f"2️⃣ Contacte l'administrateur (Tél : <b>{ADMIN_TEL}</b>) "
-    "avec ton reçu de paiement et ton n° de commande.\n"
-    "3️⃣ Reçois ton fichier VPN, puis tape ici le code <b>0</b> pour Nuit Cheat All "
-    "ou le code <b>1</b> pour Dayou afin de débloquer tes tutoriels.\n"
+    "💳 <b>Paiement :</b> Natcash\n"
+    "📌 <b>Statut :</b> ⏳ En attente de paiement\n"
+    f"{LINE}\n\n"
+    "<b>✅ POUR VALIDER LA COMMANDE, CONTACTE L'ADMINISTRATEUR "
+    "VIA WHATSAPP OU TELEGRAM 👇</b>\n\n"
+    "1️⃣ Effectue le dépôt Natcash de <b>{price} HTG</b>\n"
+    f"2️⃣ Envoie ton reçu et ton n° de commande à {ADMIN_USERNAME} (<b>{ADMIN_TEL}</b>)\n"
+    "3️⃣ Reçois ton fichier VPN, puis tape <b>0</b> (Nuit Cheat All) "
+    "ou <b>1</b> (Dayou) pour débloquer tes tutoriels 🎓\n\n"
     f"{LINE}\n"
     "🙏 <i>Merci de ta confiance !</i>"
 )
@@ -145,38 +168,37 @@ GUIDE_DAYOU = (
     "⚡ <b>Bon jeu et profite de ton service Inocsene Zero !</b>"
 )
 
-# ───────────── OUTILS & CLAVIERS ─────────────
-def get_name(user):
-    first = user.first_name if user else None
-    return html.escape(first) if first else "cher client"
-
+# ───────────── CLAVIERS ─────────────
 def main_menu():
-    m = types.InlineKeyboardMarkup(row_width=1)
-    m.add(
-        types.InlineKeyboardButton("🛡️ VPN Anti-Blacklist (Boutons) - 450 HTG", callback_data="vpn_boutons"),
-        types.InlineKeyboardButton("❄️ VPN Anti-Blacklist (Freeze) - 500 HTG", callback_data="vpn_freeze"),
-        types.InlineKeyboardButton("⚙️ Panel Anti-Ban", callback_data="panel"),
-        types.InlineKeyboardButton("💬 Contacter sur WhatsApp 🟢", url=ADMIN_URL_WA),
-        types.InlineKeyboardButton("💬 Contacter sur Telegram 🔵", url=ADMIN_URL_TG),
+    m = types.InlineKeyboardMarkup()
+    for code, p in PRODUCTS.items():
+        m.row(types.InlineKeyboardButton(f"{p['emoji']} {p['name']}", callback_data=f"offer_{code}"))
+    m.row(
+        types.InlineKeyboardButton("🟢 WhatsApp", url=ADMIN_URL_WA),
+        types.InlineKeyboardButton("🔵 Telegram", url=ADMIN_URL_TG),
     )
+    m.row(types.InlineKeyboardButton("📢 Canal Proofs & Tutos", url=LINK_CHANNEL_BUTTON))
     return m
 
-def buy_menu(product_code):
-    m = types.InlineKeyboardMarkup(row_width=1)
-    m.add(
-        types.InlineKeyboardButton("▶️ Continuer l'achat", callback_data=f"buy_{product_code}"),
-        types.InlineKeyboardButton("🔙 Retour au menu", callback_data="menu_home"),
-    )
+def offer_menu(code):
+    m = types.InlineKeyboardMarkup()
+    m.row(types.InlineKeyboardButton("🛒 Continuer l'achat", callback_data=f"buy_{code}"))
+    m.row(types.InlineKeyboardButton("🔙 Retour au menu", callback_data="menu_home"))
     return m
 
 def contact_buttons():
-    m = types.InlineKeyboardMarkup(row_width=1)
-    m.add(
-        types.InlineKeyboardButton("🟢 Contacter l'administrateur sur WhatsApp", url=ADMIN_URL_WA),
-        types.InlineKeyboardButton("🔵 Contacter l'administrateur sur Telegram", url=ADMIN_URL_TG),
-        types.InlineKeyboardButton("🔙 Menu Principal", callback_data="menu_home"),
+    m = types.InlineKeyboardMarkup()
+    m.row(
+        types.InlineKeyboardButton("🟢 WhatsApp", url=ADMIN_URL_WA),
+        types.InlineKeyboardButton("🔵 Telegram", url=ADMIN_URL_TG),
     )
+    m.row(types.InlineKeyboardButton("🏠 Menu principal", callback_data="menu_home"))
     return m
+
+# ───────────── OUTILS ─────────────
+def get_name(user):
+    first = user.first_name if user else None
+    return html.escape(first) if first else "cher client"
 
 def normalize(text):
     text = unicodedata.normalize("NFKD", text)
@@ -193,8 +215,17 @@ def make_order_number(user_id):
     now = now_local()
     return f"IZ-{now.strftime('%y%m%d')}-{str(user_id)[-4:]}{now.strftime('%H%M')}"
 
+def send_demo(chat_id, p):
+    """Envoie la vidéo de démo en premier : vidéo directe, sinon lien avec aperçu."""
+    try:
+        bot.copy_message(chat_id, DEMO_CHANNEL, p["demo_id"])
+    except Exception:
+        try:
+            bot.send_message(chat_id, f"🎬 <b>Démonstration en vidéo</b>\n👉 {p['demo_link']}")
+        except Exception:
+            pass
+
 def notify_admin(user, action):
-    """Envoie une notification à l'admin quand un client utilise le bot."""
     if not ADMIN_TELEGRAM_ID:
         return
     try:
@@ -216,7 +247,7 @@ def start(message):
     notify_admin(message.from_user, "Démarrage du bot (/start)")
     bot.send_message(
         message.chat.id,
-        WELCOME.format(name=get_name(message.from_user)),
+        build_welcome(get_name(message.from_user)),
         reply_markup=main_menu(),
     )
 
@@ -234,38 +265,32 @@ def send_guide_dayou(message):
 def on_click(call):
     bot.answer_callback_query(call.id)
     chat = call.message.chat.id
-    data = call.data
+    data = call.data or ""
 
     if data == "menu_home":
-        bot.send_message(chat, WELCOME.format(name=get_name(call.from_user)), reply_markup=main_menu())
+        bot.send_message(chat, build_welcome(get_name(call.from_user)), reply_markup=main_menu())
 
-    elif data == "vpn_boutons":
-        notify_admin(call.from_user, "Consultation VPN Boutons (450 HTG)")
-        bot.send_message(chat, VPN_BOUTONS_TEXT, reply_markup=buy_menu("boutons"))
-
-    elif data == "vpn_freeze":
-        notify_admin(call.from_user, "Consultation VPN Freeze (500 HTG)")
-        bot.send_message(chat, VPN_FREEZE_TEXT, reply_markup=buy_menu("freeze"))
+    elif data.startswith("offer_"):
+        code = data.split("_", 1)[1]
+        if code in PRODUCTS:
+            p = PRODUCTS[code]
+            notify_admin(call.from_user, f"Consultation {p['name']}")
+            send_demo(chat, p)                                   # 1) vidéo
+            bot.send_message(chat, build_offer(p), reply_markup=offer_menu(code))  # 2) description + boutons
 
     elif data.startswith("buy_"):
-        prod_type = data.split("_")[1]
-        if prod_type == "boutons":
-            p_name, p_price = "VPN Anti-Blacklist (Boutons)", "450"
-        else:
-            p_name, p_price = "VPN Anti-Blacklist (Freeze Auto)", "500"
-
-        ticket = TICKET_TEMPLATE.format(
-            order=make_order_number(call.from_user.id),
-            name=get_name(call.from_user),
-            date=now_local().strftime("%d/%m/%Y à %H:%M (heure d'Haïti)"),
-            product=p_name,
-            price=p_price,
-        )
-        notify_admin(call.from_user, f"Génération billet de commande ({p_name})")
-        bot.send_message(chat, ticket, reply_markup=contact_buttons())
-
-    elif data == "panel":
-        bot.send_message(chat, PANEL_TEXT)
+        code = data.split("_", 1)[1]
+        if code in PRODUCTS:
+            p = PRODUCTS[code]
+            ticket = TICKET_TEMPLATE.format(
+                order=make_order_number(call.from_user.id),
+                name=get_name(call.from_user),
+                date=now_local().strftime("%d/%m/%Y à %H:%M (heure d'Haïti)"),
+                product=p["ticket_name"],
+                price=p["price"],
+            )
+            notify_admin(call.from_user, f"Billet de commande : {p['name']}")
+            bot.send_message(chat, ticket, reply_markup=contact_buttons())
 
 # Les autres messages ne reçoivent aucune réponse.
 
