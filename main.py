@@ -1,5 +1,6 @@
 import os
 import html
+import time
 import threading
 import unicodedata
 from datetime import datetime, timedelta, timezone
@@ -15,7 +16,7 @@ if not TOKEN:
 
 ADMIN_TELEGRAM_ID = os.environ.get("ADMIN_TELEGRAM_ID")  # optionnel : notifications
 
-ADMIN_USERNAME = "@Inocsene"   # contact Telegram (affiché en texte)
+ADMIN_USERNAME = "@Inocsene"   # contact Telegram
 ADMIN_TEL = "+50956466804"
 ADMIN_URL_WA = (
     "https://wa.me/50956466804?text="
@@ -23,6 +24,11 @@ ADMIN_URL_WA = (
 )
 
 LINE = "━━━━━━━━━━━━━━━━━━━━"
+
+# Animation à l'arrivée d'un nouvel écran
+# 🔥 flammes et étincelles : "5104841245755180586"
+# 🎉 confettis            : "5046509860389126442"
+EFFECT_ID = "5104841245755180586"
 
 # ───────────── LIENS ─────────────
 LINK_ACTIVER_NUIT = "https://t.me/InocseneZeroTuto/4"
@@ -32,8 +38,14 @@ LINK_CHANNEL_PROOF = "https://t.me/InocseneZeroTuto"   # canal « Tutos & Proofs
 
 DEMO_CHANNEL = "@InocseneZeroTuto"
 
+# Anti-spam : dernier clic par utilisateur
+USER_COOLDOWN = {}
+COOLDOWN_SECONDS = 1.5
+
+# Vidéo de démo envoyée à chaque client (pour la supprimer ensuite)
+DEMO_MSG = {}
+
 # ───────────── OFFRES ─────────────
-# code = tutoriel envoyé quand le client tape 0 ou 1
 PRODUCTS = {
     "bouton": {
         "emoji": "🔰",
@@ -130,12 +142,13 @@ def build_offer(p):
     )
 
 PANEL_TEXT = (
-    "<b>🗝️ PANEL ANTI-BAN PREMIUM 💎</b>\n"
+    "<b>🔥 PANEL ANTI-BAN VIP PRO 🛡️</b>\n"
     f"{LINE}\n\n"
-    "<blockquote>⏳ <b>BIENTÔT DISPONIBLE</b>\n"
-    "Les panels sont indisponibles pour le moment.\n"
-    "Seuls nos VPN sont actuellement en stock.</blockquote>\n\n"
-    f"🔔 <i>Contacte l'administrateur ({ADMIN_USERNAME}) pour être prévenu dès la réouverture.</i>"
+    "<blockquote>⚡ <b>ACCÈS VIP EXCLUSIF</b>\n"
+    "Les panels sont actuellement en cours de mise à jour.\n"
+    "Seuls nos VPN Ultra-Sécurisés sont disponibles en stock pour le moment.</blockquote>\n\n"
+    f"🔔 <i>Contacte directement l'administrateur ({ADMIN_USERNAME}) pour être inscrit "
+    "sur la liste de réservation prioritaire !</i>"
 )
 
 TICKET_TEMPLATE = (
@@ -167,6 +180,16 @@ TICKET_TEMPLATE = (
     "🙏 <i>Merci de ta confiance !</i>"
 )
 
+SECURITY_WARNING = (
+    "⚠️ AVERTISSEMENT DE SÉCURITÉ TRÈS IMPORTANT :\n"
+    "Ne clique jamais sur le bouton « Join Telegram » ou sur les liens externes "
+    "situés à l'intérieur de l'application VPN.\n"
+    "<b>Cela annulera instantanément ta protection Anti-Blacklist et risquera de "
+    "compromettre la sécurité de ton compte de jeu.</b>\n\n"
+    "🚨 <b>SI UN MESSAGE « UPDATE » (MISE À JOUR) APPARAÎT SUR TON ÉCRAN :</b>\n"
+    "Ne clique sur rien et <b>supprime rapidement l'APK</b> de ton téléphone.\n\n"
+)
+
 GUIDE_NUIT_CHEAT = (
     "<b>🎬 TUTORIELS NUIT CHEAT ALL - INOCSENE ZERO 🎬</b>\n"
     f"{LINE}\n\n"
@@ -174,11 +197,7 @@ GUIDE_NUIT_CHEAT = (
     f"👉 Regarde cette vidéo : {LINK_ACTIVER_NUIT}\n\n"
     "🔷 Étape 2 : Comment générer la clé (Key)\n"
     f"👉 Regarde cette vidéo : {LINK_KEY_NUIT}\n\n"
-    "⚠️ AVERTISSEMENT DE SÉCURITÉ TRÈS IMPORTANT :\n"
-    "Ne clique jamais sur le bouton « Join Telegram » ou sur les liens externes "
-    "situés à l'intérieur de l'application VPN.\n"
-    "<b>Cela annulera instantanément ta protection Anti-Blacklist et risquera de "
-    "compromettre la sécurité de ton compte de jeu.</b>\n\n"
+    + SECURITY_WARNING +
     f"{LINE}\n"
     "📢 <i>Si un lien pose problème, rejoins directement notre canal officiel :</i>\n"
     f"👉 <b>Inocsene Zero • Tutos &amp; Proofs</b> ({LINK_CHANNEL_PROOF})\n\n"
@@ -190,11 +209,7 @@ GUIDE_DAYOU = (
     f"{LINE}\n\n"
     "🔷 Étape unique : Comment générer la clé (Key) de Dayou\n"
     f"👉 Regarde cette vidéo : {LINK_KEY_DAYOU}\n\n"
-    "⚠️ AVERTISSEMENT DE SÉCURITÉ TRÈS IMPORTANT :\n"
-    "Ne clique jamais sur le bouton « Join Telegram » ou sur les liens externes "
-    "situés à l'intérieur de l'application VPN.\n"
-    "<b>Cela annulera instantanément ta protection Anti-Blacklist et risquera de "
-    "compromettre la sécurité de ton compte de jeu.</b>\n\n"
+    + SECURITY_WARNING +
     f"{LINE}\n"
     "📢 <i>Si un lien pose problème, rejoins directement notre canal officiel :</i>\n"
     f"👉 <b>Inocsene Zero • Tutos &amp; Proofs</b> ({LINK_CHANNEL_PROOF})\n\n"
@@ -206,7 +221,7 @@ def main_menu():
     m = types.InlineKeyboardMarkup()
     for code, p in PRODUCTS.items():
         m.row(types.InlineKeyboardButton(f"{p['emoji']} {bold(p['name'])}", callback_data=f"offer_{code}"))
-    m.row(types.InlineKeyboardButton(f"🗝️ {bold('Panel Anti-Ban Premium')} 💎", callback_data="panel"))
+    m.row(types.InlineKeyboardButton(f"🔥 {bold('PANEL ANTI-BAN VIP PRO')} 🛡️", callback_data="panel"))
     m.row(types.InlineKeyboardButton(f"🟢 {bold('Contacter sur WhatsApp')}", url=ADMIN_URL_WA))
     m.row(types.InlineKeyboardButton(f"📢 {bold('Canal Proofs & Tutos')}", url=LINK_CHANNEL_PROOF))
     return m
@@ -214,13 +229,13 @@ def main_menu():
 def offer_menu(code):
     m = types.InlineKeyboardMarkup()
     m.row(types.InlineKeyboardButton(f"🛒 {bold('CONTINUER L' + chr(39) + 'ACHAT')} ✅", callback_data=f"buy_{code}"))
-    m.row(types.InlineKeyboardButton(f"🔙 {bold('Retour au menu')}", callback_data="menu_home"))
+    m.row(types.InlineKeyboardButton(f"⬅️ {bold('Retour au menu')}", callback_data="menu_home"))
     return m
 
 def contact_buttons():
     m = types.InlineKeyboardMarkup()
     m.row(types.InlineKeyboardButton(f"🟢 {bold('Contacter sur WhatsApp')}", url=ADMIN_URL_WA))
-    m.row(types.InlineKeyboardButton(f"🏠 {bold('Menu principal')}", callback_data="menu_home"))
+    m.row(types.InlineKeyboardButton(f"⬅️ {bold('Menu principal')}", callback_data="menu_home"))
     return m
 
 # ───────────── OUTILS ─────────────
@@ -243,15 +258,39 @@ def make_order_number(user_id):
     now = now_local()
     return f"IZ-{now.strftime('%y%m%d')}-{str(user_id)[-4:]}{now.strftime('%H%M')}"
 
+def send_fx(chat, text, reply_markup=None):
+    """Envoie un message avec une animation (effet Telegram) ; sans effet si indisponible."""
+    try:
+        return bot.send_message(chat, text, reply_markup=reply_markup, message_effect_id=EFFECT_ID)
+    except Exception:
+        return bot.send_message(chat, text, reply_markup=reply_markup)
+
+def remove_msg(chat, msg_id):
+    try:
+        bot.delete_message(chat, msg_id)
+    except Exception:
+        pass
+
 def send_demo(chat_id, p):
     """Vidéo de démo en premier : vidéo directe, sinon lien avec aperçu."""
+    sent = None
     try:
-        bot.copy_message(chat_id, DEMO_CHANNEL, p["demo_id"])
+        sent = bot.copy_message(chat_id, DEMO_CHANNEL, p["demo_id"])
     except Exception:
         try:
-            bot.send_message(chat_id, f"🎬 <b>Démonstration en vidéo</b>\n👉 {p['demo_link']}")
+            sent = bot.send_message(chat_id, f"🎬 <b>Démonstration en vidéo</b>\n👉 {p['demo_link']}")
         except Exception:
             pass
+    if sent is not None:
+        if len(DEMO_MSG) > 1000:
+            DEMO_MSG.clear()
+        DEMO_MSG[chat_id] = sent.message_id
+
+def clear_demo(chat_id):
+    """Supprime la vidéo de démo pour garder un chat propre."""
+    mid = DEMO_MSG.pop(chat_id, None)
+    if mid:
+        remove_msg(chat_id, mid)
 
 def notify_admin(user, action):
     if not ADMIN_TELEGRAM_ID:
@@ -273,7 +312,8 @@ def notify_admin(user, action):
 @bot.message_handler(commands=["start"])
 def start(message):
     notify_admin(message.from_user, "Démarrage du bot (/start)")
-    bot.send_message(
+    clear_demo(message.chat.id)
+    send_fx(
         message.chat.id,
         build_welcome(get_name(message.from_user)),
         reply_markup=main_menu(),
@@ -289,26 +329,50 @@ def send_guide_dayou(message):
     notify_admin(message.from_user, "Demande tutoriel Dayou (1)")
     bot.send_message(message.chat.id, GUIDE_DAYOU)
 
+# ───────────── GESTION DES CLICS (anti-spam + animation) ─────────────
 @bot.callback_query_handler(func=lambda call: True)
 def on_click(call):
+    user_id = call.from_user.id
+    now = time.time()
+
+    # Nettoyage de la mémoire anti-spam
+    if len(USER_COOLDOWN) > 1000:
+        for uid in [u for u, t in USER_COOLDOWN.items() if now - t > 60]:
+            USER_COOLDOWN.pop(uid, None)
+
+    if user_id in USER_COOLDOWN and (now - USER_COOLDOWN[user_id]) < COOLDOWN_SECONDS:
+        bot.answer_callback_query(call.id, "⚠️ Patiente une seconde avant de re-cliquer...", show_alert=False)
+        return
+
+    USER_COOLDOWN[user_id] = now
     bot.answer_callback_query(call.id)
+
     chat = call.message.chat.id
+    msg_id = call.message.message_id
     data = call.data or ""
 
     if data == "menu_home":
-        bot.send_message(chat, build_welcome(get_name(call.from_user)), reply_markup=main_menu())
+        clear_demo(chat)
+        notify_admin(call.from_user, "Retour au menu principal")
+        if "BILLET DE COMMANDE" not in (call.message.text or ""):
+            remove_msg(chat, msg_id)          # l'ancien écran disparaît (le billet, lui, reste)
+        send_fx(chat, build_welcome(get_name(call.from_user)), reply_markup=main_menu())
 
     elif data == "panel":
-        notify_admin(call.from_user, "Consultation Panel Anti-Ban Premium")
-        bot.send_message(chat, PANEL_TEXT, reply_markup=contact_buttons())
+        clear_demo(chat)
+        notify_admin(call.from_user, "Consultation Panel Anti-Ban VIP PRO")
+        remove_msg(chat, msg_id)
+        send_fx(chat, PANEL_TEXT, reply_markup=contact_buttons())
 
     elif data.startswith("offer_"):
         code = data.split("_", 1)[1]
         if code in PRODUCTS:
             p = PRODUCTS[code]
             notify_admin(call.from_user, f"Consultation {p['name']}")
-            send_demo(chat, p)                                                     # 1) vidéo
-            bot.send_message(chat, build_offer(p), reply_markup=offer_menu(code))  # 2) description + boutons
+            clear_demo(chat)
+            remove_msg(chat, msg_id)                                     # le menu disparaît
+            send_demo(chat, p)                                           # 1) vidéo
+            send_fx(chat, build_offer(p), reply_markup=offer_menu(code)) # 2) fiche + boutons, avec animation
 
     elif data.startswith("buy_"):
         code = data.split("_", 1)[1]
@@ -324,7 +388,9 @@ def on_click(call):
                 tuto=p["tuto"],
             )
             notify_admin(call.from_user, f"Billet de commande : {p['name']}")
-            bot.send_message(chat, ticket, reply_markup=contact_buttons())
+            clear_demo(chat)
+            remove_msg(chat, msg_id)                                     # la fiche disparaît
+            send_fx(chat, ticket, reply_markup=contact_buttons())
 
 # Les autres messages ne reçoivent aucune réponse.
 
