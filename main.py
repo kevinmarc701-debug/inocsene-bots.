@@ -40,6 +40,10 @@ COOLDOWN_SECONDS = 1.5
 # Vidéo de démo envoyée à chaque client (pour la supprimer ensuite)
 DEMO_MSG = {}
 
+# Si l'envoi direct de la vidéo échoue, on ne réessaie qu'après 10 minutes
+COPY_RETRY_AT = 0.0
+COPY_RETRY_DELAY = 600
+
 # ───────────── OFFRES ─────────────
 PRODUCTS = {
     "bouton": {
@@ -88,7 +92,8 @@ except Exception:
 def now_local():
     return datetime.now(TZ)
 
-bot = telebot.TeleBot(TOKEN, parse_mode="HTML")
+# 8 clics traités en même temps (réactivité)
+bot = telebot.TeleBot(TOKEN, parse_mode="HTML", threaded=True, num_threads=8)
 
 # ───────────── GRAS POUR LES BOUTONS ─────────────
 def bold(text):
@@ -253,6 +258,10 @@ def make_order_number(user_id):
     now = now_local()
     return f"IZ-{now.strftime('%y%m%d')}-{str(user_id)[-4:]}{now.strftime('%H%M')}"
 
+def run_bg(fn, *args):
+    """Lance une tâche en arrière-plan pour ne pas ralentir la réponse au client."""
+    threading.Thread(target=fn, args=args, daemon=True).start()
+
 def remove_msg(chat, msg_id):
     try:
         bot.delete_message(chat, msg_id)
@@ -260,11 +269,15 @@ def remove_msg(chat, msg_id):
         pass
 
 def send_demo(chat_id, p):
-    """Vidéo de démo en premier : vidéo directe, sinon lien avec aperçu."""
+    """Vidéo de démo en premier : vidéo directe si possible, sinon lien avec aperçu."""
+    global COPY_RETRY_AT
     sent = None
-    try:
-        sent = bot.copy_message(chat_id, DEMO_CHANNEL, p["demo_id"])
-    except Exception:
+    if time.time() >= COPY_RETRY_AT:
+        try:
+            sent = bot.copy_message(chat_id, DEMO_CHANNEL, p["demo_id"])
+        except Exception:
+            COPY_RETRY_AT = time.time() + COPY_RETRY_DELAY   # on saute cette tentative pendant 10 min
+    if sent is None:
         try:
             sent = bot.send_message(chat_id, f"🎬 <b>Démonstration en vidéo</b>\n👉 {p['demo_link']}")
         except Exception:
@@ -275,14 +288,12 @@ def send_demo(chat_id, p):
         DEMO_MSG[chat_id] = sent.message_id
 
 def clear_demo(chat_id):
-    """Supprime la vidéo de démo pour garder un chat propre."""
+    """Retire l'ancienne vidéo de démo (suppression en arrière-plan)."""
     mid = DEMO_MSG.pop(chat_id, None)
     if mid:
-        remove_msg(chat_id, mid)
+        run_bg(remove_msg, chat_id, mid)
 
-def notify_admin(user, action):
-    if not ADMIN_TELEGRAM_ID:
-        return
+def _notify(user, action):
     try:
         username = f"@{user.username}" if user.username else "Pas de pseudo"
         msg = (
@@ -295,6 +306,11 @@ def notify_admin(user, action):
         bot.send_message(ADMIN_TELEGRAM_ID, msg)
     except Exception:
         pass
+
+def notify_admin(user, action):
+    """Notification admin envoyée en arrière-plan."""
+    if ADMIN_TELEGRAM_ID:
+        run_bg(_notify, user, action)
 
 # ───────────── HANDLERS ─────────────
 @bot.message_handler(commands=["start"])
@@ -363,10 +379,10 @@ def on_click(call):
         code = data.split("_", 1)[1]
         if code in PRODUCTS:
             p = PRODUCTS[code]
-            notify_admin(call.from_user, f"Consultation {p['name']}")
-            clear_demo(chat)
-            remove_msg(chat, msg_id)                                  # le menu disparaît
-            send_demo(chat, p)                                        # 1) vidéo
+            notify_admin(call.from_user, f"Consultation {p['name']}")   # en arrière-plan
+            clear_demo(chat)                                            # en arrière-plan
+            run_bg(remove_msg, chat, msg_id)                            # le menu disparaît en parallèle
+            send_demo(chat, p)                                          # 1) vidéo
             bot.send_message(chat, build_offer(p), reply_markup=offer_menu(code))  # 2) fiche + boutons
 
     elif data.startswith("buy_"):
