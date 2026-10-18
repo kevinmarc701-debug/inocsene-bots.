@@ -25,11 +25,6 @@ ADMIN_URL_WA = (
 
 LINE = "━━━━━━━━━━━━━━━━━━━━"
 
-# Animation à l'arrivée d'un nouvel écran
-# 🔥 flammes et étincelles : "5104841245755180586"
-# 🎉 confettis            : "5046509860389126442"
-EFFECT_ID = "5104841245755180586"
-
 # ───────────── LIENS ─────────────
 LINK_ACTIVER_NUIT = "https://t.me/InocseneZeroTuto/4"
 LINK_KEY_NUIT = "https://t.me/InocseneZeroTuto/3"
@@ -229,13 +224,13 @@ def main_menu():
 def offer_menu(code):
     m = types.InlineKeyboardMarkup()
     m.row(types.InlineKeyboardButton(f"🛒 {bold('CONTINUER L' + chr(39) + 'ACHAT')} ✅", callback_data=f"buy_{code}"))
-    m.row(types.InlineKeyboardButton(f"⬅️ {bold('Retour au menu')}", callback_data="menu_home"))
+    m.row(types.InlineKeyboardButton(f"➡️ {bold('Retour au menu')}", callback_data="menu_home"))
     return m
 
 def contact_buttons():
     m = types.InlineKeyboardMarkup()
     m.row(types.InlineKeyboardButton(f"🟢 {bold('Contacter sur WhatsApp')}", url=ADMIN_URL_WA))
-    m.row(types.InlineKeyboardButton(f"⬅️ {bold('Menu principal')}", callback_data="menu_home"))
+    m.row(types.InlineKeyboardButton(f"➡️ {bold('Menu principal')}", callback_data="menu_home"))
     return m
 
 # ───────────── OUTILS ─────────────
@@ -257,13 +252,6 @@ def is_one(message):
 def make_order_number(user_id):
     now = now_local()
     return f"IZ-{now.strftime('%y%m%d')}-{str(user_id)[-4:]}{now.strftime('%H%M')}"
-
-def send_fx(chat, text, reply_markup=None):
-    """Envoie un message avec une animation (effet Telegram) ; sans effet si indisponible."""
-    try:
-        return bot.send_message(chat, text, reply_markup=reply_markup, message_effect_id=EFFECT_ID)
-    except Exception:
-        return bot.send_message(chat, text, reply_markup=reply_markup)
 
 def remove_msg(chat, msg_id):
     try:
@@ -313,7 +301,7 @@ def notify_admin(user, action):
 def start(message):
     notify_admin(message.from_user, "Démarrage du bot (/start)")
     clear_demo(message.chat.id)
-    send_fx(
+    bot.send_message(
         message.chat.id,
         build_welcome(get_name(message.from_user)),
         reply_markup=main_menu(),
@@ -329,7 +317,7 @@ def send_guide_dayou(message):
     notify_admin(message.from_user, "Demande tutoriel Dayou (1)")
     bot.send_message(message.chat.id, GUIDE_DAYOU)
 
-# ───────────── GESTION DES CLICS (anti-spam + animation) ─────────────
+# ───────────── GESTION DES CLICS (anti-spam + écran remplacé) ─────────────
 @bot.callback_query_handler(func=lambda call: True)
 def on_click(call):
     user_id = call.from_user.id
@@ -354,15 +342,22 @@ def on_click(call):
     if data == "menu_home":
         clear_demo(chat)
         notify_admin(call.from_user, "Retour au menu principal")
-        if "BILLET DE COMMANDE" not in (call.message.text or ""):
-            remove_msg(chat, msg_id)          # l'ancien écran disparaît (le billet, lui, reste)
-        send_fx(chat, build_welcome(get_name(call.from_user)), reply_markup=main_menu())
+        welcome = build_welcome(get_name(call.from_user))
+        if "BILLET DE COMMANDE" in (call.message.text or ""):
+            bot.send_message(chat, welcome, reply_markup=main_menu())   # le billet reste affiché
+        else:
+            try:
+                bot.edit_message_text(welcome, chat, msg_id, reply_markup=main_menu())
+            except Exception:
+                bot.send_message(chat, welcome, reply_markup=main_menu())
 
     elif data == "panel":
         clear_demo(chat)
         notify_admin(call.from_user, "Consultation Panel Anti-Ban VIP PRO")
-        remove_msg(chat, msg_id)
-        send_fx(chat, PANEL_TEXT, reply_markup=contact_buttons())
+        try:
+            bot.edit_message_text(PANEL_TEXT, chat, msg_id, reply_markup=contact_buttons())
+        except Exception:
+            bot.send_message(chat, PANEL_TEXT, reply_markup=contact_buttons())
 
     elif data.startswith("offer_"):
         code = data.split("_", 1)[1]
@@ -370,14 +365,15 @@ def on_click(call):
             p = PRODUCTS[code]
             notify_admin(call.from_user, f"Consultation {p['name']}")
             clear_demo(chat)
-            remove_msg(chat, msg_id)                                     # le menu disparaît
-            send_demo(chat, p)                                           # 1) vidéo
-            send_fx(chat, build_offer(p), reply_markup=offer_menu(code)) # 2) fiche + boutons, avec animation
+            remove_msg(chat, msg_id)                                  # le menu disparaît
+            send_demo(chat, p)                                        # 1) vidéo
+            bot.send_message(chat, build_offer(p), reply_markup=offer_menu(code))  # 2) fiche + boutons
 
     elif data.startswith("buy_"):
         code = data.split("_", 1)[1]
         if code in PRODUCTS:
             p = PRODUCTS[code]
+            clear_demo(chat)
             ticket = TICKET_TEMPLATE.format(
                 order=make_order_number(call.from_user.id),
                 name=get_name(call.from_user),
@@ -388,9 +384,10 @@ def on_click(call):
                 tuto=p["tuto"],
             )
             notify_admin(call.from_user, f"Billet de commande : {p['name']}")
-            clear_demo(chat)
-            remove_msg(chat, msg_id)                                     # la fiche disparaît
-            send_fx(chat, ticket, reply_markup=contact_buttons())
+            try:
+                bot.edit_message_text(ticket, chat, msg_id, reply_markup=contact_buttons())
+            except Exception:
+                bot.send_message(chat, ticket, reply_markup=contact_buttons())
 
 # Les autres messages ne reçoivent aucune réponse.
 
