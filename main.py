@@ -229,13 +229,15 @@ def main_menu():
 def offer_menu(code):
     m = types.InlineKeyboardMarkup()
     m.row(types.InlineKeyboardButton(f"🛒 {bold('CONTINUER L' + chr(39) + 'ACHAT')} ✅", callback_data=f"buy_{code}"))
-    m.row(types.InlineKeyboardButton(f"➡️ {bold('Retour au menu')}", callback_data="menu_home"))
+    # Flèche tournée vers la gauche
+    m.row(types.InlineKeyboardButton(f"⬅️ {bold('Retour au menu')}", callback_data="menu_home"))
     return m
 
 def contact_buttons():
     m = types.InlineKeyboardMarkup()
     m.row(types.InlineKeyboardButton(f"🟢 {bold('Contacter sur WhatsApp')}", url=ADMIN_URL_WA))
-    m.row(types.InlineKeyboardButton(f"➡️ {bold('Menu principal')}", callback_data="menu_home"))
+    # Flèche tournée vers la gauche
+    m.row(types.InlineKeyboardButton(f"⬅️ {bold('Menu principal')}", callback_data="menu_home"))
     return m
 
 # ───────────── OUTILS ─────────────
