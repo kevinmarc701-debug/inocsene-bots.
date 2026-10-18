@@ -66,9 +66,9 @@ PRODUCTS = {
     "auto": {
         "emoji": "❄️",
         "name": "VPN Freeze Automatique VIP",
-        "ticket_name": "VPN Freeze Automatique VIP (Anti-Ban &amp; Anti-Blacklist)",
+        "ticket_name": "VPN Freeze Automatique VIP (Anti-Ban & Anti-Blacklist)",
         "features": [
-            "Protection Anti-Ban &amp; Anti-Blacklist (haute précision)",
+            "Protection Anti-Ban & Anti-Blacklist (haute précision)",
             "Système Freeze automatique haute performance",
             "Gameplay fluide et ultra-stable",
             "Idéal pour les longues sessions de jeu",
@@ -92,7 +92,7 @@ except Exception:
 def now_local():
     return datetime.now(TZ)
 
-# 8 clics traités en même temps (réactivité)
+# 8 clics traités en même temps (réactivité maximale)
 bot = telebot.TeleBot(TOKEN, parse_mode="HTML", threaded=True, num_threads=8)
 
 # ───────────── GRAS POUR LES BOUTONS ─────────────
@@ -122,7 +122,7 @@ def build_welcome(name):
         f"{LINE}\n\n"
         f"Salut <b>{name}</b> ! 👋 Bienvenue sur la plateforme officielle.\n\n"
         "<blockquote>🚀 <b>Connexion ultra-rapide et stable</b>\n"
-        "🛡️ <b>Protection Anti-Ban &amp; Anti-Blacklist</b>\n"
+        "⚡ <b>Protection Anti-Ban & Anti-Blacklist</b>\n"
         "🎮 <b>Gameplay fluide pour tes jeux</b></blockquote>\n\n"
         f"{LINE}\n"
         "👇 <i>Fais ton choix ci-dessous pour découvrir nos services.</i>"
@@ -142,7 +142,7 @@ def build_offer(p):
     )
 
 PANEL_TEXT = (
-    "<b>🔥 PANEL ANTI-BAN VIP PRO 🛡️</b>\n"
+    "<b>⚡ PANEL ANTI-BAN VIP PRO 💎</b>\n"
     f"{LINE}\n\n"
     "<blockquote>⚡ <b>ACCÈS VIP EXCLUSIF</b>\n"
     "Les panels sont actuellement en cours de mise à jour.\n"
@@ -160,7 +160,7 @@ TICKET_TEMPLATE = (
     "👤 <b>Client :</b> {name}\n"
     "📅 <b>Date :</b> {date}</blockquote>\n\n"
     f"{LINE}\n"
-    "🛡️ <b>Produit :</b> {product}\n"
+    "⚡ <b>Produit :</b> {product}\n"
     "✅ Connexion ultra-rapide et stable\n"
     "✅ Protection avancée pour le jeu\n"
     f"{LINE}\n\n"
@@ -181,7 +181,7 @@ TICKET_TEMPLATE = (
 )
 
 SECURITY_WARNING = (
-    "⚠️ AVERTISSEMENT DE SÉCURITÉ TRÈS IMPORTANT :\n"
+    "⚡ AVERTISSEMENT DE SÉCURITÉ TRÈS IMPORTANT :\n"
     "Ne clique jamais sur le bouton « Join Telegram » ou sur les liens externes "
     "situés à l'intérieur de l'application VPN.\n"
     "<b>Cela annulera instantanément ta protection Anti-Blacklist et risquera de "
@@ -221,7 +221,7 @@ def main_menu():
     m = types.InlineKeyboardMarkup()
     for code, p in PRODUCTS.items():
         m.row(types.InlineKeyboardButton(f"{p['emoji']} {bold(p['name'])}", callback_data=f"offer_{code}"))
-    m.row(types.InlineKeyboardButton(f"🔥 {bold('PANEL ANTI-BAN VIP PRO')} 🛡️", callback_data="panel"))
+    m.row(types.InlineKeyboardButton(f"⚡ {bold('PANEL ANTI-BAN VIP PRO')} 💎", callback_data="panel"))
     m.row(types.InlineKeyboardButton(f"🟢 {bold('Contacter sur WhatsApp')}", url=ADMIN_URL_WA))
     m.row(types.InlineKeyboardButton(f"📢 {bold('Canal Proofs & Tutos')}", url=LINK_CHANNEL_PROOF))
     return m
@@ -276,7 +276,7 @@ def send_demo(chat_id, p):
         try:
             sent = bot.copy_message(chat_id, DEMO_CHANNEL, p["demo_id"])
         except Exception:
-            COPY_RETRY_AT = time.time() + COPY_RETRY_DELAY   # on saute cette tentative pendant 10 min
+            COPY_RETRY_AT = time.time() + COPY_RETRY_DELAY
     if sent is None:
         try:
             sent = bot.send_message(chat_id, f"🎬 <b>Démonstration en vidéo</b>\n👉 {p['demo_link']}")
@@ -333,7 +333,7 @@ def send_guide_dayou(message):
     notify_admin(message.from_user, "Demande tutoriel Dayou (1)")
     bot.send_message(message.chat.id, GUIDE_DAYOU)
 
-# ───────────── GESTION DES CLICS (anti-spam + écran remplacé) ─────────────
+# ───────────── GESTION DES CLICS (anti-spam + animation de chargement fluide) ─────────────
 @bot.callback_query_handler(func=lambda call: True)
 def on_click(call):
     user_id = call.from_user.id
@@ -355,12 +355,18 @@ def on_click(call):
     msg_id = call.message.message_id
     data = call.data or ""
 
+    # Petite animation visuelle de chargement fluide
+    try:
+        bot.edit_message_text("⏳ <i>Chargement en cours...</i>", chat, msg_id)
+    except Exception:
+        pass
+
     if data == "menu_home":
         clear_demo(chat)
         notify_admin(call.from_user, "Retour au menu principal")
         welcome = build_welcome(get_name(call.from_user))
         if "BILLET DE COMMANDE" in (call.message.text or ""):
-            bot.send_message(chat, welcome, reply_markup=main_menu())   # le billet reste affiché
+            bot.send_message(chat, welcome, reply_markup=main_menu())
         else:
             try:
                 bot.edit_message_text(welcome, chat, msg_id, reply_markup=main_menu())
@@ -379,11 +385,11 @@ def on_click(call):
         code = data.split("_", 1)[1]
         if code in PRODUCTS:
             p = PRODUCTS[code]
-            notify_admin(call.from_user, f"Consultation {p['name']}")   # en arrière-plan
-            clear_demo(chat)                                            # en arrière-plan
-            run_bg(remove_msg, chat, msg_id)                            # le menu disparaît en parallèle
-            send_demo(chat, p)                                          # 1) vidéo
-            bot.send_message(chat, build_offer(p), reply_markup=offer_menu(code))  # 2) fiche + boutons
+            notify_admin(call.from_user, f"Consultation {p['name']}")
+            clear_demo(chat)
+            run_bg(remove_msg, chat, msg_id)
+            send_demo(chat, p)
+            bot.send_message(chat, build_offer(p), reply_markup=offer_menu(code))
 
     elif data.startswith("buy_"):
         code = data.split("_", 1)[1]
